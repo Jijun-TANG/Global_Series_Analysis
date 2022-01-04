@@ -1,0 +1,768 @@
+---
+title: Projet Analyse de données sur séries globales
+subtitle: Global Impact of the 1980's regim shift
+author: Abel Zeghidour, Amine Sekourane & Jijun Tang
+date: 09 Janvier 2021
+output:   
+  bookdown::html_document2:
+    fig_caption: yes
+    number_sections: yes
+    toc: yes
+linkcolor: red
+header-includes:
+- \usepackage[francais]{babel}
+- \usepackage{float}
+- \usepackage{booktabs}
+---
+
+```{r global_options, include=FALSE,warning=FALSE , message=FALSE}
+
+knitr::opts_chunk$set(fig.align = 'center',fig.pos = 'H')
+#position par défaut des figures dans le pdf : centrées et à l'endroit ou on les construit
+library(magrittr) #pour utiliser l'opérateur pipe %>%
+library(kableExtra) #pour améliorer les tableaux
+options(knitr.table.format = "pandoc") 
+
+```
+
+# Introduction
+
+## Présentation de la problématique
+
+Le jeu de données SERIES GLOBALS a été créé à partir des statistiques disponibles sur le site Global Historical Climatology Network. 
+[L’article](https://onlinelibrary.wiley.com/doi/epdf/10.1111/gcb.13106) traite le phénomène de Regime Shifts et exactement le shift de 1980. Les changements de régime sont des changements importants, brusques et persistants dans la structure et la fonction des écosystèmes, du climat, des systèmes financiers ou d'autres systèmes complexes. Plusieurs faits sont à l’origine de ce changement. L'équipe de chercheurs qui mènent cette recherche font partie d'un grand projet.
+
+Ce dernier vise à réaliser des simulations climatiques de façons coordonnées entre les différents groupes de recherche, permettant une meilleure estimation et compréhension des différences entre les modèles climatiques. Il permet, en outre, d’estimer l’incertitude dû à l’imperfection des modèles dans l’estimation du changement climatique. 
+
+Leur rôle est indépendant de l'intervention de l'homme dans le changement globale mais se base plutôt sur l'hypothèse que ce phénomène est une conséquence indirect de l'éruption du Volcan EL Chichon au Mexique. L’éruption de ce dernier est à la cause d'une cascade de changements environnementaux brusques. 
+
+
+## Commentaires jeux de données
+
+Le résumé descriptif détaillé des données de l’étude se trouve sur Moodle. Le jeu de données contient 66 lignes, sur lesquelles on a mesuré 18 variables. Chaque ligne (l’unité statistique) représente une année.
+Le data set de base contenait 72  séries temporelle mais on en possède que 18. Ceci est du à la répartition de tâches entre différentes équipes du projet d'intercomparaison des modèles couplés et à la non régularité de la prise des mesures. En effet, les mesures ont commencé en 1932 mais elles n’ont pas été faite d’une manière indépendante et aléatoire. C’est pour cela qu’on a dans quelques variables des valeurs NAN.  
+
+Les variables sont en fonction des années. En effet, le jeu de données expose les différentes variables affectées par le changement climatique de 1946 à 2011. 
+L'intérêt de travailler avec plusieurs séries temporelles est de connaitre l'effet le comportement post-Regime Shift de nos séries et de pouvoir prédire leur comportement au cas ou d'autres catastrophes naturels intéragissent et si des effets multiplicateur peuvent se reproduire.
+
+## variables explicatives
+
+Nous disposons de 18 variables explicatives toutes quantitatives:
+
+* L’indice NAO (hPa) (moyenne hivernale)
+* nombre de jours de neige en Suisse  (moyenne hivernale)
+* Étendu de la couverture en Mer Baltique (10e3 km²)
+* Volume de glace de mer en Arctique Septembre (10e3 km^3)
+* floraison des cerisiers a Kyoto (jours par ans)
+* Arrivée des Hirondelle en Grande Bretagne (jours par ans)
+* Débite de la rivière Daugava en Hiver (m^3/s)
+* Biomasse phytoplanctonique en Mer du Nord (estimation visuel de la chlorophyllienne)
+* Température Océan Arctique ( les température sont toutes en C°)
+* Température Pacifique Nord
+* Température Océan Atlantique Nord
+* Température Europe
+* Température Asie
+* Température Océan Atlantique Sud
+* Anomalies des températures terrestres Globale
+* Anomalies des températures Océan Globale
+
+
+## Objectif de l'étude
+
+* déterminer des propriétés spécifiques de nos variables (distribution , relation avec d'autres variables)
+
+* mettre en évidence les tendances potentielles que peuvent suivre ces variables
+
+* création d'un modèle de régression linéaire et multiple
+
+
+## Présentation statistique de notre jeu de donnée
+
+```{r , echo=FALSE, message=FALSE}
+library(ggplot2)
+data_sg=read.csv2("SeriesGlobales.csv",sep=";",header = T)
+
+data_sg<-data_sg[,-10]
+data_sg <- data_sg[5:60,]
+year<-data_sg$Annee
+NAO<-data_sg$indice_NAO_DJFM
+neigeSuisse<-data_sg$Nombre_de_jours_de_neige_en_Suisse_DJFM
+glaceBaltique<-data_sg$Etendue_de_la_couverture_de_glace_en_Mer_Baltique
+glaceArctic<-data_sg$Volume_de_glace_de_mer_en_Arctique_Septembre
+cerisierKyoto<-data_sg$Floraison_des_cerisiers_à_Kyoto
+hirondelle<-data_sg$Arrivée_de_l.Hirondelle_en_UK
+debitriviere<-data_sg$Debit_de_la_rivière_Daugava_Hiver
+biomass<-data_sg$Biomasse_phytoplanctonique_en_Mer_du_Nord
+t_mernord<-data_sg$Temperature_de_la_Mer_du_Nord
+t_artic<-data_sg$Temperature_Ocean_Arctique
+t_pacnord<-data_sg$Temperature_Pacifique_Nord
+t_atlnord<-data_sg$Temperature_Ocean_Atlantique_Nord
+t_atlsud<-data_sg$Temperature_Ocean_Atlantique_Sud
+t_europe<-data_sg$Temperature_Europe
+t_asie<-data_sg$Temperature_Asie
+a_t_global<-data_sg$Anomalies_des_temperatures_terrestres_Global
+a_o_global<-data_sg$Anomalies_des_temperatures_Ocean_Global
+
+summary(data_sg)
+
+
+```
+
+
+
+
+# Etudes des variables explicatives (répartition, distribution etc...){.tabset}
+
+
+
+
+
+
+
+## Distributions indice NAO (hPa)
+
+
+```{r , echo=F}
+n <- length(NAO)
+
+
+hist(NAO,col='red',breaks='FD',freq = F,main ='Histogramme du NAO')#ressemble à une gaussienne
+mu <-mean(NAO)
+sig <-var(NAO)
+curve(dnorm(x, mu, sig), add = TRUE)
+
+```
+
+
+Comme on peut le voir, le test graphique n'est pas concluant. La courbe gaussienne ne semble pas intercepter la distribution des barres de l'histogramme.
+
+
+
+## Densité de l'arrivée des Hirondelles en Grandes Bretagnes
+
+```{r , echo=F}
+hist(hirondelle,col='purple',breaks ='FD',freq=F,main = 'Histogramme arrivé des Hirondelles' )
+
+
+mu2 <- mean(hirondelle)
+sig2 <- sd(hirondelle)
+curve(dnorm(x, mu2, sig2), add = TRUE)
+
+
+```
+L'histogramme nous suggère que la densité suit une gaussienne
+
+
+
+## Distribution Température Europe et Asie
+
+```{r, echo=F}
+par(mfrow=c(1,2))
+hist(t_europe,col='pink',breaks = 'FD',freq=F,main = 'Histogramme temperature Europe')
+mu3 <- mean(t_europe)
+sig3 <- sd(t_europe)
+curve(dnorm(x, mu3, sig3),add = TRUE)
+hist(t_asie,col='pink',breaks = 'FD',freq=F,main = 'Histogramme temperature Asie')
+mu4 <- mean(t_asie)
+sig4 <- sd(t_asie)
+curve(dnorm(x, mu4, sig4),add = TRUE)
+par(mfrow=c(1,1))
+```
+ On remarque qu'il y a une répartition plus centrée des températures hivernales en Europe qu'en Asie (le climat est plus stable) il semble aussi que les valeurs minimales soit plus basses en Asie
+
+## Anomalies de température
+
+```{r, echo=F}
+boxplot(a_t_global,col="royalblue" , main="Anomalie des temperature" , xlab= "Temperature")
+```
+
+ 
+D'après le boxplot la répartition des anomalies de température depuis 1946 montre une tendance haussière des températures. En effet, on observe une médiane supérieure à 0 et des valeur positives plus excentrées de la médiane que les valeurs négatives dont un outlier; c'est à dire une années où l'on a mesuré des températures anormalement grandes (année 1998).
+
+
+
+# Indépendance des variables explicatives{.tabset}
+
+## Hypothèses {.tabset}
+
+On a supposé au préalable que les variables liées aux températures étaient corrélées.
+Il peut être aussi intéressant en plus de vérifier celle-ci, de déterminer si les variations de température peuvent expliquer d'autres phénomènes tel que l'évolution de la migration des Hirondelles.
+
+### Test independance entre un phénomène de migration et les anomalies de température
+
+``` {r, echo=F,warning=F}
+chisq.test(hirondelle,a_t_global)
+```
+L' hypothèse nulle n'est pas rejetée au seuil 5%, on peut donc considérer qu'il n'y a pas de dépendance entre l'arrivée des hirondelles en Grande Bretagne et les anomalies de température globale.
+### Test independance fleuraisons des cerisiers de Kyoto et les températures en Asie
+
+```{r, echo=F,warning=F}
+chisq.test(cerisierKyoto,t_asie)
+
+```
+Surprenamment le test d'indépendance accepte au seuil 5% l'hypothèse d'indépendance. Il est possible qu'un petit nombre de variable et leur qualités de mesures soient responsables d'une déviation de la valeur du test.
+
+
+
+
+## Étude de la corrélation entre les variables
+
+```{r, echo=F}
+matricecor <- cor(data_sg)
+pairs(matricecor)
+
+```
+
+
+
+D'après la matrice de corrélation et les nuages de points affichés par la fonction pairs, il
+semblerait qu'il existe des relations linéaires entre certaines variables par
+exemple:
+On observe une tendance linéaire à coefficient positif entre l'année de mesure et l'indice NAO.En résumé on note des phénomènes intéressant. On peut dire que les variables de température sont pour la majorité corrélé entre elles, on vérifie aussi une corrélation évidente avec ces variables et les anomalies de température. Un aspect plus intéressant est par exemple la présence d'un coefficient de corrélation proche de -1 entre l'arrivée du nombre d'Hirondelle en Grande Bretagne et les anomalies de températures globales des océans ce qui contredit notre test khi deux d'indépendance au préalable. On voit aussi que il y a une influence annuelle sur le nombre d'hirondelle (coefficient de corrélation -0.70).
+La fleuraison des cerisiers n’est pas significativement corrélée aux autres variables.
+
+
+
+
+# Régression linéaire simple
+
+## Etude de la variable densité
+
+### Hypothèse 1
+
+On vérifie que notre matrice plan d'expérience est de rang plein , soit rang(X)=18
+
+```{r, echo=F}
+
+rangmatriceX <- qr(data_sg)$rank #on regarde le rang de notre matrice
+rangmatriceX
+``` 
+
+Ensuite on regarde le coefficient de corrélation entre le nombre d'hirondelles qui arrivent en Grande Bretagne et la température moyenne en Europe.
+
+
+```{r, echo=F}
+coefcor <- cor(hirondelle,t_europe)
+coefcor
+```
+
+Le coefficient de corrélation est proche de 1 : On considère donc qu'il existe une probabilité non négligeable que l'évolution du nombre d'hirondelle soit en relation linéaire (à coefficient négatif) avec la température en Europe. Vérifions le en appliquant un modèle de regréssion linéaire simple.
+
+### Nuage de points {.tabset}
+
+#### Plot densité / acidité fixe
+
+```{r, echo=F}
+plot(t_europe,hirondelle,'p',col='royalblue',main="Nombre d'hirondelle selon les température européennes",xlab = 'Temperature',ylab = 'Nombre d arivee')
+
+```
+
+
+On peut dejà remarquer à partir de ce plot une tendance. En effet, on perçoit une évolution décroissante de la variable d'étude en fonction des températures. De plus, il ne semble pas vraiment y avoir d'observations atypiques dans ce modèle. Cependant un test visuel ne suffit pas pour conclure de manière raisonnable et il est utile de confirmer nos observations par l'utilisation d'un modèle linéaire.
+
+#### Régression ajusté
+
+```{r, echo=F }
+#(création régression surlaquelle on superpose les points ajustés)
+plot(t_europe,hirondelle,'p',col='royalblue',main="Nombre d'hirondelle selon les température européennes",xlab = 'Temperature',ylab = "Nombre d'arrivée")
+#(création régression surlaquelle on superpose les points ajustés)
+reg.ss.simple <- lm(hirondelle~t_europe, data=data_sg)
+abline(reg.ss.simple,col='red')
+points(hirondelle,reg.ss.simple$fitted.values,pch=3,col='blue')
+
+```
+
+
+
+Observation : 
+* notre regression linéaire intercepte bien le nuage de points, les point ajustés sont centrés dans le nuage de points et s'allignent correctement avec la droite. Ceci vérifie assez clairement la relation supposée auparavant.
+
+
+```{r, echo=F}
+#maintenant on teste l'hypothese  H0 les coefficients  Bk 
+summary(reg.ss.simple)
+```
+La p value  pour le coefficient Béta 0 et Béta 1 et largement infèrieure à tout les niveaux donc on rejette l'hypothèse H0 comme quoi ils sont nuls. On peut dire que le coefficient intercept est utile ce qui est vérifiable en traçant la régression linéaire sans ce coefficient.
+
+```{r, echo=F}
+#on rajoute la droite de régression linéaire sans le B0 (intercepte)
+plot(t_europe,hirondelle,'p',col='royalblue',main="Nombre d'hirondelle selon les température européennes",xlab ='Temperature' ,ylab = "Nombre d'arivee",ylim = c(-50,150))
+reg.ss.simple <- lm(hirondelle~t_europe, data= data_sg)
+abline(reg.ss.simple,col='red')
+points(hirondelle,reg.ss.simple$fitted.values,pch=3,col='blue')
+reg.ss.simple2 <- lm(hirondelle~t_europe-1, data= data_sg)
+#abline(reg.ss.simple2,col='black')
+
+```
+
+On observe bien que sans le coefficient d'interception notre droite de régréssion linéaire en noire est totalement faussée d'où l'importance de ce coefficient.
+
+### Étude des résidus {.tabset}
+
+Il est simple de vérifier que nos résidus ne suivent pas une tendance particulière. En effet il est important de vérifier leur comportement aléatoire en traçant le plot des résidus estimés  . De plus, les résidus studentisés sont utilisés dans les graphiques ils peuvent plus facilement être comparés entre eux puisque leur variance est supposée égale. Pour cela il est important de vérifier l'hypothèse de base du modèle linéaire que les erreurs sont homoscédastiques.
+
+#### Résidus éstimés
+
+
+
+```{r residus estimees, echo=F}
+
+plot(reg.ss.simple$fitted.values, reg.ss.simple$residuals)
+abline(h = 0, col = "darkgreen", lwd = 2)
+
+```
+
+Visuelement, il semblerait que nos résidus soient concentrés dans certaines régions. Cependant le nombre de points est assez élevé ce qui semble être la raison de cette concentration. Globalement on observe que les points sont assez dispersé , l'hypothèse aléatoire de leur distribution n'est donc pas remise en cause.Ensuite on peut voir qu'ils sont globalement  centrées autour de la droite d'équation y=0 ce qui semble confirmer l'hypothèse d'homogénéité de nos résidus.
+Il est possible de vérifier cette hypothèse plus rigoureusement grâce aux résidus studentisés.
+
+#### Comparaisons quantile empirique des résidus studentisé /quantile empirique loi de Student
+
+
+Nous vérifions l'hypothèse de gaussiannité des résidus, nous avons vu en cours qu'il suffit de vérifier que l'estimateur des résidus studentisé suit une loi de Student.
+
+```{r, echo=F}
+residu.stud <- rstudent(reg.ss.simple)
+quant.t <- qt((n:1)/n,n-3) #on peut créer un vecteur liste des quantiles (de 0 a n par pas de 1/n)
+
+plot(quant.t, sort(residu.stud,decreasing = T), xlab = 'Student T(n-p-1)',
+     ylab = 'Quantiles empiriques des résidus', main = 'QQ-plot des residus')
+abline(0, 1, col ='blue')
+``` 
+
+Le résultat est plutoôt claire; une grande majorité de nos quantiles se situent sur la droite d'équation x=y  ce qui confirme l'hypothèse selon laquelle les résidus théoriques suivent la loi normale  N(0,sd) .
+
+
+## Comparaisons résidus {.tabset}
+Les résidus estimés n'étant pas à la même échelle que les résidus standardisés, il n'est pas utile de les comparer graphiquement. Ainsi on préfère comparer les résidus studentisés et les résidus standardisés 
+
+```{r, echo=F}
+residus.std <- rstandard(reg.ss.simple)
+plot(1:n,residus.std, pch = 4, col = 'blue', main = 'Residus', xlab = 'Index',ylab = 'Residus')
+points(1:n, residu.stud, col = 'red')
+legend(90, 4.2 , c('standardise', 'studentise'), col = c('blue', 'red'), pch = c(4, 1))
+```
+
+on voit que les deux résidus sont identiques même pour les grandes valeurs. En effet,les résidus dit studentisés sont des résidus normalisé  à partir de l'éstimation de la variance .
+
+### Résidus studentisés et valeurs abéranttes
+
+L' étude des résidus stundetisés nous permet d'obtenir de l'information sur la proportion de valeurs abérrantes dans nos points.
+
+```{r, echo=F}
+residu.stud <- rstudent(reg.ss.simple)
+
+n <- length(hirondelle)
+plot(1:n,residu.stud,col='blue',xlab='Index',ylab='Residus studentises',main='valeurs aberrantes')
+abline(-2,0)
+abline(2,0)
+ID3endessous <- (1:n)[residu.stud < -2]
+ID3 <- (1:n)[residu.stud > 2]
+text(ID3,residu.stud[ID3],ID3,col='red',pos=1)
+text(ID3endessous,residu.stud[ID3endessous],ID3endessous,col='black',pos=2)
+```
+Pour affirmer que notre modèle ne contient pas trop de point abérrants nous vérifions que les points en dehors du bandeau situé entre [-2;2] ne représentent pas plus de 5% des points totaux.  Il y a 2 valeurs abérrantes sur 56 points (environ 3%) de plus la valeur 32 n'est pas trop éloignée du seuil, contrairement à la valeur 26 qui peut être considérée comme abérrante . On en déduit que les observations sont globalement bonne sur notre modèle.
+
+### Données avec valeurs abéranttes
+
+```{r , echo=F}
+plot(t_europe,hirondelle,  xlab = "Temperature", ylab = "nombre d'arrivee des hirondelles",main = 'Donnees avec valeurs aberrantes',col='purple')
+abline(coef(reg.ss.simple), col = 'grey')
+points(t_europe[ID3],hirondelle[ID3], col = 'RED', pch = 16) 
+text(t_europe[ID3], hirondelle[ID3], ID3, pos = 4, col = 'blue')
+points(t_europe[ID3endessous], hirondelle[ID3endessous], col = 'RED', pch = 16) 
+text(t_europe[ID3endessous], hirondelle[ID3endessous], ID3endessous, pos = 4, col = 'blue')
+```
+
+Le point numéro 26 semble  être le plus éloigné  de la droite de regression linéaire; il
+peut être judicieux de supprimer cette valeur pour améliorer le modèle.
+
+
+
+
+
+### Étude sur les points levier {.tabset}
+
+
+#### Levier
+
+```{r, echo=F}
+levier <- hatvalues(reg.ss.simple)
+plot(1:n, levier, xlab = 'Index', ylab = 'Poids h_ii',col='blue')
+p <- reg.ss.simple$rank
+seuil1 <- 2*p/n
+seuil2 <- 3*p/n
+abline(seuil1,0,lty=2)
+abline(seuil2,0,lty=3)
+ID <- (1:n)[levier>seuil1]
+IDs2 <- (1:n)[levier>seuil2]
+text(ID,levier[ID],ID,col='red',pos=1)
+```
+
+Observations:
+* Nos données contiennent  4 points leviers qui dépassent le seuil 2. On observe des points nettement supérieurs au seuil deux. On peut se demander si il serait utile de les supprimer des données (pour cette régression simple uniquement) car ils ont une influence sur l' estimation du nombre d'hirondelle.
+
+#### distance de cook
+
+```{r, echo=F}
+cook <- cooks.distance(reg.ss.simple)
+plot(1:n, cook, xlab = 'Index', ylab = 'Distance de Cook', main = 'Distance de Cook',ylim = c(0,.15))
+s1 <- qf(0.5, p, n-p)
+s2 <- qf(0.1, p, n-p)
+abline(s2, 0, lty = 2)
+abline(s1, 0, lty = 3)
+
+```
+
+on voit qu'il y a deux points qui soit à la fois levier et  aberrant. 
+
+#### Données valeurs aberrantes et points leviers
+
+```{r levier aberrante,echo=F}
+plot(t_europe,hirondelle, xlab = 'Temperature', ylab = "Nombre d'Hirondelle",main = 'Donnees avec valeurs aberrantes et points leviers',col='purple')
+abline(coef(reg.ss.simple), col = 'Navy')
+points(t_europe[ID3], hirondelle[ID3], col = 'cyan', pch = 16) 
+
+points(t_europe[ID3endessous], hirondelle[ID3endessous], col = 'cyan', pch = 16) 
+
+points(t_europe[IDs2], hirondelle[IDs2], col = 'green', pch = 16) 
+
+legend(1.2, 95, c('aberrante', 'levier'), col = c('cyan','green'), pch = 16)
+```
+
+On remarque qu'il y a deux valeur abérrante et 0 point levier dans notre modèle, cela peut être du à une erreur dans la prise de mesure ou un événement particulier ayant entrainé un changement dans la migration des hirondelles.
+
+
+
+
+
+
+## Intervalles de confiance et de prédictions {.tabset}
+
+### Intervalle de confiance et de prédictions fit données
+
+```{r ic confiance predictions, echo=F}
+t_europeordonne = data.frame(t_europe=sort(t_europe))
+ #intervalles de confiance
+int.pred <- predict(reg.ss.simple,t_europeordonne, interval = "pred")
+int.conf <- predict(reg.ss.simple, t_europeordonne, interval = "conf")
+plot(t_europe, hirondelle, xlab = 'Temperature', ylab = "Nombre d'hirondelle",main='Intervalles de confiance et de prediction',col='purple')
+abline(reg.ss.simple, lw=1)
+lines(t_europeordonne$t_europe, int.conf[,2], lty=2, col='red')
+lines(t_europeordonne$t_europe, int.conf[,3], lty=2, col='red')
+lines(t_europeordonne$t_europe, int.pred[,2], lty=3, col='blue')
+lines(t_europeordonne$t_europe, int.pred[,3], lty=3, col='blue')
+legend(12,0.994,c('confiance','prediction'),lty=c(2,3),col=c('red','blue'))
+
+points(t_europeordonne$t_europe[ID3], hirondelle[ID3], col='blue', pch=16) 
+text(t_europeordonne$t_europe[ID3], hirondelle[ID3], ID3, pos=4, col='blue')
+points(t_europeordonne$t_europe[ID3endessous], hirondelle[ID3endessous], col='blue', pch=16) 
+text(t_europeordonne$t_europe[ID3endessous], hirondelle[ID3endessous], ID3, pos=4, col='blue')
+points(t_europeordonne$t_europe[IDs2],hirondelle[IDs2], col='red', pch=16) 
+
+legend(1,95,c('aberrante'),col=c('blue'),pch=16)
+
+
+
+
+```
+
+### Intervalle de confiance données
+
+Une version plus esthétique est plus facile à apréhender visuellement.
+
+```{r, echo=F , include=FALSE, warning=FALSE , message=FALSE}
+library(ggplot2)
+
+geom_smooth(method="auto", se=TRUE, fullrange=FALSE, level=0.95)
+
+```
+
+```{r, echo=F , warning=FALSE , message=FALSE}
+
+
+
+
+
+ggplot(data_sg, aes(x=t_europe, y=hirondelle))  + 
+  geom_point(shape=18, color="blue")+
+  geom_smooth(method=lm,  linetype="dashed",
+              color="darkred", fill="blue")
+
+
+
+
+
+
+```
+
+
+
+Il n'est pas choquant de voir que notre point aberrant sort de l'intervalle de prédiction.
+
+
+
+## Conclusion Régression linéaire simple
+
+A la suite de la vérifications des hypothèses théoriques et de l'étude des résidus nous pouvons dire que notre modèle explicatif est cohérent et valide. Malgré cela le modèle ne suffit pas à prédire précisément les valeurs, on remarque une certaine dispersion de celle-ci. Cependant cette étude suggère que le nombre d'hirondelle migrants continuera à baisser au fur et à mesure des années.
+Cette étude nous permet d'estimer l'influence des changements climatiques sur le comportement des phénomènes liés à l'évolution de la faune. On voit donc ici, par une étude simple une des conséquence du régime shift annoncé dans l'article.
+
+
+# Modèle Multilinéaire
+
+## Hypothèse et selections de variables
+
+Dans cette partie nous cherchons à determiner l'influence de nos variables sur les anomalies de températures terreste
+
+L'objectif de cette démarche et d'estimer notre variable d'anomalie des température terrestre en fonction de toutes les autres variables de notre jeu de données.
+Pour cela il faudra vérifier les hypothèses du cours sur les résidus afin de pouvoir affimer la validité du modèle construit.
+Tout d'abord nous créeons notre regression linéaire multiple
+
+
+
+```{r , echo=F,message=FALSE, warning=FALSE }
+data_tmp = data_sg[, -which(names(data_sg) %in% c("Anomalies_des_temperatures_terrestres_Global"))]
+mod1 <- lm(a_t_global ~ ., data = data_tmp)
+
+```
+
+
+
+
+### Etude des résidus {.tabset}
+
+#### Normalité des résidus 
+
+##### Comparaisons quantile résidus studensité empirique / quantile empirique loi de Student
+
+```{r , echo=F, warning=FALSE}
+residu.student <- rstudent(mod1)
+quant.t <- qt((1:n)/n, n-p-1)
+plot(quant.t, sort(residu.student), xlab = 'Student T(n-p-1)',
+     ylab = 'Quantiles empiriques des résidus', main = 'QQ-plot des residus')
+abline(0, 1, col ='blue')
+```
+Les points interceptent bien la droite l'hypothèse de normalité de nos résidus est vérifié
+nous pouvons aussi les viualiser par un histogramme
+
+##### Histogramme Résidus
+
+```{r , echo=F}
+
+hist <- hist(mod1$residuals, probability = TRUE,main = 'Histogramme residus')
+
+
+```
+
+
+D'après les graphiques précédents le modèle est valide et les estimations correctes,le modèle estimé devrait présenter une bonne qualité d'adéquations aux données.
+
+##### Visualisation résidus
+
+```{r , echo=F}
+par(mfrow=c(1,2))
+plot(mod1$fitted.values, mod1$residuals)
+abline(h = 0, col = "darkgreen", lwd = 2)
+plot(mod1)
+par(mfrow=c(1,1))
+
+```
+
+
+Il ne semble pas y avoir de tendance particulière les résidus sont bien gaussien et aléatoire.
+
+ 
+Tout d'abord nous regardons les valeurs aberrantes.
+ 
+ 
+#### Valeurs aberanttes
+
+```{r modele multilineaire, echo=F}
+residu.student <- rstudent(mod1)
+
+
+plot(1:n, residu.student, col = 'orange',type= 'p', xlab = 'Index', ylab = 'Residus studentises',main = 'Valeurs aberrantes',pch = 1)
+abline(-2, 0)
+abline(2, 0)
+IDval.ab <- (1:n)[abs(residu.student)>2]
+points(IDval.ab, residu.student[IDval.ab], col = 'red', pch = 16) 
+text(IDval.ab, residu.student[IDval.ab], IDval.ab, pos = 4, col = 'blue')
+```
+
+Le nombre de points en dehors de l'intervalle [-2;2] (3 points) est inférieure à 5%, on remarque la valeur d'indice 40 est très éloignée de l'intervalle.
+
+
+ 
+  
+#### Distances de cook
+ 
+```{r , echo=F}
+ cook <- cooks.distance(mod1)
+plot(1:n, cook, xlab = 'Index', ylab = 'Distance de Cook')
+s1 <- qf(0.5, p, n-p)
+s2 <- qf(0.1, p, n-p)
+abline(s2, 0, lty = 2)
+abline(s1, 0, lty = 3)
+```
+
+Un seul point est très dévié au dessus du 1er seuil. Il n'y a pas un grand nombre de points(4) qui peuvent fausser notre modèle.
+
+
+
+
+### Visualisation Modèle multilinéaire {.tabset}
+
+
+#### Sommaire du modèle
+
+```{r , echo=F, message=FALSE, warning=FALSE}
+summary(mod1)
+
+```
+Les informations extraite du modèle nous permettent de detecter les variables d'influence.On voit que les variables année, nombre de jours de neige en Suisse, volume de glâce en Arctique,temperature de la mer du Nord et temperature en Asie  sont significatives dans se modèle elles affichent une p value inférieure à 5 % et le coefficient R ajusté atteint la valeur maximum possible pour le modèle.
+
+#### représentation des nuages de point avec la droite d'ajustement
+
+```{r , echo=F}
+
+par(mfrow = c(3,4))
+plot(a_t_global ~ year,col='blue')
+abline(coef(mod1)[1], coef(mod1)[2])
+plot(a_t_global ~ neigeSuisse,col='green')
+abline(coef(mod1)[1], coef(mod1)[4])
+plot(a_t_global ~ glaceArctic,col='brown')
+abline(coef(mod1)[1], coef(mod1)[6])
+plot(a_t_global ~ t_mernord,col='Pink')
+abline(coef(mod1)[1], coef(mod1)[11])
+plot(a_t_global ~ t_asie,col='magenta')
+abline(coef(mod1)[1], coef(mod1)[16])
+
+par(mfrow = c(1,1))
+```
+
+Les graphiques suivants nous montrent les nuages de point des anomalies de température en fonction des variables les plus significative du modèle, on fait apparaître la droite de régression des coefficients d'estimations Beta correspondant. On peut voir que globalement le modèle évalue la tendance grossière
+
+## Sélection de variable
+
+Pour améliorer notre modèle nous faisons une sélection des variables , pour cela nous utilisons la fonction regsubset et cherchons un modèle qui minimise le critère BIC
+
+```{r, echo=F}
+library(leaps)
+choix <- regsubsets(a_t_global ~., data = data_tmp, nvmax = 17)
+plot(choix, scale = "bic" , ylab = "BIC")
+
+``` 
+
+
+Au niveau maximum on accepte les variables qui minimise le critère BIC de température pacifique, Atlantique nord et sud, océan arctique, pacifique nord, anomalies des température océaniques globale, fleuraisons des cerisier à Kyoto, surface de glace mer Baltique.
+Ce qui semble en adéquation avec les recherches scientifiques sur le climat. En effet les zones les plus froides de la terre sont celles qui ont un impact majeur sur le climat globale.
+
+
+### Modèle optimisé {.tabset}
+
+On élimine les variables non significatives par rapport au critère BIC en créant un nouveaux modèle (mod3).
+
+#### Nouveau modèle
+
+```{r, echo=F}
+
+mod3  <- lm(a_t_global ~t_atlsud+t_atlnord+t_mernord+glaceBaltique+t_pacnord, data =data_tmp)
+mod3
+
+summary(mod3)
+```
+
+Le sommaire du modèle nous montre moins de variable significative. La valeur du coefficient R ajusté est cependant moins bonne que pour le modèle précédent ce qui nous amène à penser que ce modèle est moins adapté.
+
+
+
+
+## Selections de variable méthode ascendante
+
+Cette fois ci nous réalisons une méthode plus algorithmique dans laquelle on part d'un modèle complet et on élimine à chaque étape la variable la moins significative, en essayant de minimiser le critère AIC. Pour cela nous utilisons la fonction step.
+
+```{r methode ascendante, include=FALSE,echo=F, message=FALSE, warning=FALSE}
+
+
+step(mod1,direction = 'backward')
+
+     
+```
+
+
+
+La méthode de sélection de variable pas à pas nous donne un modèle qui élimine toutes les variables. Cela nous amène à dire que les anomalies de températures ne sont pas explicable par nos jeux de données. Il est possible que le trop peux de données et leur qualité incertaine soit à l'origine d'une mauvaise interprétation des modèles.
+
+
+Conclusion: notre modèle n'est pas optimale pour expliquer de manière vraiment précise nos variables. Il semble quand même valide à une certaine échelle car nos nuages de points suivent la même tendance que la droite de régression correspondante. La sélection de variable n'a pas amélioré significativement la précision de celui-ci.
+
+# Méthode ACP
+
+Vu que nos données sont sous forme de séries temporelle, on va faire appel au package Zoo et Xts. 
+Nous représentons d'abord graphiquement la série temporelle Anomalies_des_temperatures_terrestres_Global
+```{r , echo=FALSE ,message=FALSE, warning=FALSE}
+library(FactoMineR) 
+library(zoo)
+library(xts)
+res.pca = PCA(data_sg, scale.unit = TRUE,  quali.sup = c(1, 5, 6), quanti.sup = c(4), graph = F)
+
+Anomalies_Temp<-zoo(data_sg$Anomalies_des_temperatures_terrestres_Global, order.by = data_sg$Annee)  
+
+plot(Anomalies_Temp, type = "l", major.format = "%y", las = 2)
+
+```
+
+On remarque qu'à partir de l'année 1985, notre série temporelle a commencé à avoir une tendance.
+
+
+## Analyse ACP
+
+Procédure:
+1.D'abord on normalise et centralise le dataframe .
+2.La fonction prcomp va calculer les valeurs propres ou faire une Décomposition en valeur singulière pour la matrice de covariance.
+3.La fonction va trier les valeurs propres selons leur contribution à la variance
+4.On construit une matrice de projection de K dimensions auquelle les plus représentatives.
+5.A la fin, on transforme notre data et on fait la projection dans un sous espace de K dimensions pour soustraire les datas moins significatives ou corréllés. 
+```{r acp, echo=FALSE ,message=FALSE, warning=FALSE}
+#install.packages("factoextra")
+library("factoextra")
+library(FactoMineR) 
+library(zoo)
+library(ggplot2)
+library(xts)
+data_sg.pc<-prcomp(data_sg[c(2:18)],center= TRUE, scale = TRUE)
+summary(data_sg.pc)
+      
+screeplot(data_sg.pc,type='l',npcs=10, main="Plot de 7 premiers CPs")
+abline(h = 0.5, col="red", lty=5)
+legend("topright", legend=c("Valeur propre = 0.5"),
+       col=c("red"), lty=5, cex=0.6)
+cumpro <- cumsum(data_sg.pc$sdev^2 / sum(data_sg.pc$sdev^2))
+plot(cumpro[0:13], xlab = "PC #", ylab = "valeur variance", main = "variance cumulative")
+abline(v = 7, col="blue", lty=5)
+abline(h = 0.87589, col="blue", lty=5)
+legend("topleft", legend=c("intercÃ¨pt @ PC7"),
+       col=c("blue"), lty=5, cex=0.6)
+
+
+plot(data_sg.pc$x[,1],data_sg.pc$x[,2], xlab="PC1 (48.9%)", ylab = "PC2 (13%)", main = "deux CPs qui avec la contribuation de variance>10%, 60% au total")
+```
+
+
+A partir du graphe au dessus, on peut tirer facilement que dans la situation où les données sont projetés dans un sous espace de dimension deux, "Temperature_de_la_Mer_du_Nord", "Temperature_Ocean_Arctique" ,"Temperature_Europe",
+"Debit_de_la_riviere_Daugava_Hiver",  sont corrélléz entre elles à cause de leur proximité régionale. Une autre variable proche mais un peu dévié est "indice_NAO_DJFM". Les variables se situent dans la partie en pas en droite sont exactement anti corrélées avec les variables dessus, par exemple "Nombre_de_jours_de_neige_en_Suisse_DJFM", car ils sont évidement anti-corrélées avec l'augmentation de la température.
+
+```{r ,echo=F ,message=FALSE, warning=FALSE}
+fviz_pca_var(data_sg.pc,col.var = "contrib",gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),repel = TRUE)
+fviz_pca_biplot(data_sg.pc, repel = TRUE,col.var = "#2E9FDF",col.ind = "#696969")
+```
+A partir des données au dessous on peut tirer les composantes principales et faire projeter à un sous espace de dimension K(dans notre cas, si on veut une analyse la plus claire mais perdre un peu de généralité, on peut choisir K=2, c'est à dire prendre les deux premières composantes les plus larges, ou faire plus rigoureusement en choisissant les 7 premiers qui comptent 90% de la totalité de la variance pour construire un modèle. 
+
+# Conclusion
+
+Dans cette étude statistique nous avons pu mettre en évidence des relations de dépendance entre plusieurs variables quantitatives, comme la relation entre la fréquence d'arrivée des hirondelles et la températures en Europe ou encore la fréquence de fleuraison des cerisiers à Kyoto et la température en Asie. Notre jeu de données présentait plusieurs valeur manquante ce qui nous à permis de prendre en compte les erreurs potentiels lié au manque de données. A la vue de certains graphiques et d'observation des modèles, on a pu voir que le jeu de données présentait un petit nombre d'outliers. De plus, du fait que chaque variable est exprimée selon des unités différentes ou en taux (pourcentage de la biomasse), il était difficile de visualiser nos résultats dans le cadre de la régression linéaire multiple. 
+La regression linéaire multiple et la sélection de variable nous à permit d'éliminer plusieurs variable explicative, et de trouver le modèle le plus optimale pour la description de celle-ci. Néanmoins la visualisation des résultats nous a montré un défaut au niveau de l'approximation de la variable "Anomalie des températures globale" en fonction des températures dans différents océans.
+
+Pour terminer, nous pouvons dire que le jeu de données est trop restreint et pas assez exploitable.
+
+Mais l'intérêt général de cette étude reste la visualisation des changements des régimes et leurs effets sur nos variables.
+Donc on doit faire appel à des méthodes de traitement des séries temporelles plus appropriés pour évaluer les modèles climatiques et estimer les changements climatiques futurs. 
